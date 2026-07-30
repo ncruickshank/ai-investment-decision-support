@@ -219,14 +219,14 @@ __marimo__/
 
 # Project data and generated artifacts
 data/*
-!data/.gitkeep
+!data/raw/
+data/raw/*
+!data/processed/
+data/processed/*
 models/*
-!models/.gitkeep
 reports/*
-!reports/.gitkeep
 !reports/figures/
 reports/figures/*
-!reports/figures/.gitkeep
 
 # Local notebook execution outputs
 notebooks/.ipynb_checkpoints/

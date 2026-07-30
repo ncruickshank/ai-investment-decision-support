@@ -1,0 +1,163 @@
+{
+  "companies": [
+    {
+      "company_id": "MSFT",
+      "ticker": "MSFT",
+      "name": "Microsoft Corp",
+      "sector": "Information Technology",
+      "industry": "Systems Software",
+      "cik": "0000789019"
+    },
+    {
+      "company_id": "NVDA",
+      "ticker": "NVDA",
+      "name": "NVIDIA Corp",
+      "sector": "Information Technology",
+      "industry": "Semiconductors",
+      "cik": "0001045810"
+    }
+  ],
+  "index_constituents": [
+    {
+      "index_symbol": "SP500",
+      "company_id": "NVDA",
+      "ticker": "NVDA",
+      "weight": 7.44,
+      "rank": 1,
+      "as_of_date": "2026-07-30",
+      "source": "pinned_universe"
+    },
+    {
+      "index_symbol": "SP500",
+      "company_id": "MSFT",
+      "ticker": "MSFT",
+      "weight": 4.21,
+      "rank": 3,
+      "as_of_date": "2026-07-30",
+      "source": "pinned_universe"
+    }
+  ],
+  "prices": [
+    {
+      "ticker": "MSFT",
+      "date": "2024-01-02",
+      "open": 373.86,
+      "high": 375.90,
+      "low": 366.77,
+      "close": 370.87,
+      "adj_close": 368.85,
+      "volume": 25258600,
+      "source": "yfinance"
+    },
+    {
+      "ticker": "MSFT",
+      "date": "2024-01-03",
+      "open": 369.01,
+      "high": 373.26,
+      "low": 368.51,
+      "close": 370.60,
+      "adj_close": 368.58,
+      "volume": 23083500,
+      "source": "yfinance"
+    },
+    {
+      "ticker": "NVDA",
+      "date": "2024-01-02",
+      "open": 49.24,
+      "high": 49.30,
+      "low": 47.60,
+      "close": 48.17,
+      "adj_close": 48.16,
+      "volume": 411254000,
+      "source": "yfinance"
+    },
+    {
+      "ticker": "NVDA",
+      "date": "2024-01-03",
+      "open": 47.49,
+      "high": 48.18,
+      "low": 47.32,
+      "close": 47.57,
+      "adj_close": 47.56,
+      "volume": 320896000,
+      "source": "yfinance"
+    }
+  ],
+  "sec_company_facts": {
+    "MSFT": {
+      "facts": {
+        "us-gaap": {
+          "Revenues": {
+            "label": "Revenues",
+            "units": {
+              "USD": [
+                {
+                  "start": "2023-07-01",
+                  "end": "2024-06-30",
+                  "val": 245122000000,
+                  "fy": 2024,
+                  "fp": "FY",
+                  "form": "10-K",
+                  "filed": "2024-07-30"
+                }
+              ]
+            }
+          },
+          "NetIncomeLoss": {
+            "label": "Net Income",
+            "units": {
+              "USD": [
+                {
+                  "start": "2023-07-01",
+                  "end": "2024-06-30",
+                  "val": 88136000000,
+                  "fy": 2024,
+                  "fp": "FY",
+                  "form": "10-K",
+                  "filed": "2024-07-30"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "NVDA": {
+      "facts": {
+        "us-gaap": {
+          "Revenues": {
+            "label": "Revenues",
+            "units": {
+              "USD": [
+                {
+                  "start": "2024-01-29",
+                  "end": "2025-01-26",
+                  "val": 130497000000,
+                  "fy": 2025,
+                  "fp": "FY",
+                  "form": "10-K",
+                  "filed": "2025-02-26"
+                }
+              ]
+            }
+          },
+          "Assets": {
+            "label": "Assets",
+            "units": {
+              "USD": [
+                {
+                  "end": "2025-01-26",
+                  "val": 111601000000,
+                  "fy": 2025,
+                  "fp": "FY",
+                  "form": "10-K",
+                  "filed": "2025-02-26"
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}
