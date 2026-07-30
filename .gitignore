@@ -216,3 +216,17 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Project data and generated artifacts
+data/*
+!data/.gitkeep
+models/*
+!models/.gitkeep
+reports/*
+!reports/.gitkeep
+!reports/figures/
+reports/figures/*
+!reports/figures/.gitkeep
+
+# Local notebook execution outputs
+notebooks/.ipynb_checkpoints/
