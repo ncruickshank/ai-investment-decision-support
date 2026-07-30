@@ -221,12 +221,17 @@ __marimo__/
 data/*
 !data/raw/
 data/raw/*
+data/raw/.gitkeep
 !data/processed/
 data/processed/*
+data/processed/.gitkeep
 models/*
+models/.gitkeep
 reports/*
+reports/.gitkeep
 !reports/figures/
 reports/figures/*
+reports/figures/.gitkeep
 
 # Local notebook execution outputs
 notebooks/.ipynb_checkpoints/
