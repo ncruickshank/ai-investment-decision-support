@@ -1,56 +1,78 @@
 # AI Investment Decision Support
 
-Production-style AI investment decision support platform combining
-Retrieval-Augmented Generation (RAG), financial forecasting, LLMs, and machine
-learning to synthesize market data, SEC filings, earnings transcripts, and news
-into transparent, evidence-based investment insights.
+Production-style AI investment decision support platform combining Retrieval-Augmented Generation (RAG), financial forecasting, LLMs, and machine learning to synthesize market data, SEC filings, earnings transcripts, and news into transparent, evidence-based investment insights.
 
-This repository is being built as a portfolio-quality AI engineering project.
-The system is intended to support investment research with cited evidence and
-interpretable model outputs, not to provide personalized financial advice or
-automated trading recommendations.
+This repository is being built as a portfolio-quality AI engineering project. The system is intended to support investment research with cited evidence and interpretable model outputs—not to provide personalized financial advice or automated trading recommendations.
 
-## Current Branch: 01 Project Scaffold
+## Current Status
 
-This branch establishes the lightweight Python 3.12 foundation for the project:
+The project currently includes two completed implementation milestones:
 
-- `uv` project management through `pyproject.toml`
-- Ruff linting and formatting
-- pytest smoke tests
-- Docker scaffold
-- GitHub Actions CI
-- Initial folder conventions
+* **Project scaffold**
 
-The branch intentionally avoids implementing ingestion, RAG, forecasting,
-FastAPI, Streamlit, provider adapters, or application schemas. Those pieces will
-arrive in later branch chapters.
+  * Python 3.12 project managed with `uv`
+  * Ruff linting and formatting
+  * pytest test suite
+  * Docker development environment
+  * GitHub Actions CI
+  * Repository conventions and documentation
+
+* **Structured data ingestion**
+
+  * Historical market data ingestion via `yfinance`
+  * SEC EDGAR Company Facts ingestion
+  * Notebook-first ingestion workflow
+  * Reusable ingestion modules
+  * Command-line ingestion script
+  * Local SQLite analytics database
+  * Raw artifact tracking for reproducible ingestion
+  * Idempotent UPSERT-based persistence
+
+The current ingestion pipeline populates a local SQLite database containing:
+
+| Table                | Purpose                                 |
+| -------------------- | --------------------------------------- |
+| `companies`          | Company reference data                  |
+| `index_constituents` | S&P 500 constituent snapshots           |
+| `price_bars`         | Daily historical OHLCV market data      |
+| `fundamental_facts`  | Normalized SEC XBRL Company Facts       |
+| `raw_artifacts`      | Registry of downloaded source artifacts |
+| `ingestion_runs`     | Ingestion execution metadata            |
+
+A typical ingestion currently produces:
+
+| Table              |  Rows |
+| ------------------ | ----: |
+| companies          |    10 |
+| index_constituents |    10 |
+| price_bars         | 6,450 |
+| fundamental_facts  | 7,306 |
+| raw_artifacts      |    30 |
 
 ## Repository Layout
 
 ```text
 data/         Local raw, intermediate, and processed data artifacts
 documents/    Planning and design documents
-models/       Future model artifacts such as safetensors or serialized models
-notebooks/    Exploratory notebooks and component demos
-reports/      Generated reports and model-system outputs
-reports/figures/
-scripts/      Polished command-line workflows built on reusable code
-src/          Python source files for the current lightweight scaffold
-tests/        Automated tests
+models/       Future trained model artifacts
+notebooks/    Exploratory notebooks and experimentation
+reports/      Generated reports and evaluation outputs
+scripts/      Command-line workflows
+src/          Reusable application code
+tests/        Automated test suite
 ```
 
-Generated data, model artifacts, and reports are ignored by default. Placeholder
-files keep the intended folder structure visible in git.
+Generated datasets, models, reports, and databases are ignored by default. Placeholder `.gitkeep` files preserve the intended project structure.
 
 ## Local Setup
 
-Install `uv`, then create the local environment:
+Install project dependencies:
 
 ```bash
 uv sync --dev
 ```
 
-Run the scaffold checks:
+Run the quality checks:
 
 ```bash
 uv run ruff check .
@@ -58,36 +80,67 @@ uv run ruff format --check .
 uv run pytest
 ```
 
+## Running Data Ingestion
+
+Execute the structured ingestion pipeline:
+
+```bash
+uv run python scripts/ingest_data.py
+```
+
+This will download market and SEC data, register raw artifacts, and populate the local SQLite database.
+
+The exploratory version of this workflow is available in:
+
+```text
+notebooks/01_data_acquisition.ipynb
+```
+
 ## Docker
 
-Build the local image:
+Build the local development image:
 
 ```bash
 docker build -t ai-investment-decision-support .
 ```
 
-Run the default container command, which executes the test suite:
+Run the default container command:
 
 ```bash
 docker run --rm ai-investment-decision-support
 ```
 
-## Branch Roadmap
+## Project Roadmap
 
-The design documents outline the larger implementation sequence:
+The project is being developed incrementally through a series of focused implementation branches:
 
-1. `01-project-scaffold`: project layout, tooling, Docker, tests, CI, docs
-2. `02-data-ingestion`: structured data collection and local storage
-3. `03-document-pipeline`: SEC or transcript parsing and chunking
-4. `04-rag-retrieval`: embeddings, vector search, reranking, citations
-5. `05-forecasting-baselines`: classical and XGBoost forecasting baselines
-6. `06-signal-extraction`: structured qualitative signal extraction
-7. `07-signal-aggregation`: interpretable bullish, neutral, bearish outlooks
-8. `08-streamlit-ui`: user-facing dashboard and research workflows
-9. `09-evaluation-framework`: retrieval, LLM, citation, and forecasting metrics
-10. `10-transformer-forecasting`: advanced time-series forecasting experiments
-11. `11-market-outlook-stretch`: weighted top-company market outlook
+| Branch | Milestone                               |
+| ------ | --------------------------------------- |
+| 01     | Project scaffold                        |
+| **02** | **Structured data ingestion** ✓         |
+| 03     | Document parsing and chunking           |
+| 04     | RAG retrieval system                    |
+| 05     | Forecasting baselines                   |
+| 06     | LLM signal extraction                   |
+| 07     | Signal aggregation                      |
+| 08     | Streamlit application                   |
+| 09     | Evaluation framework                    |
+| 10     | Transformer forecasting                 |
+| 11     | Market outlook and comparison workflows |
 
-See [documents/project_plan.md](documents/project_plan.md) and
-[documents/design_document.md](documents/design_document.md) for the full product
-and architecture direction.
+## Long-Term Architecture
+
+The completed system will combine:
+
+* Structured financial data ingestion
+* Document ingestion and parsing
+* Retrieval-Augmented Generation (RAG)
+* Hybrid search and reranking
+* Financial forecasting
+* LLM-based qualitative signal extraction
+* Explainable investment outlook generation
+* FastAPI services
+* Streamlit user interface
+* Evaluation of retrieval, forecasting, and LLM performance
+
+See `documents/project_plan.md` and `documents/design_document.md` for the complete product vision and system architecture.
