@@ -85,7 +85,9 @@ class SecEdgarProvider:
         self,
         cik: str,
         filing_types: list[str] | None = None,
-        limit: int | None = None,
+        # limit: int | None = None,
+        start_date: date | None = None,
+        end_date: date | None = None
     ) -> list[FilingMetadata]:
         """
         Retrieve filing metadata for a company.
@@ -131,6 +133,12 @@ class SecEdgarProvider:
             recent["primaryDocument"],
             strict=True,
         ):
+            # move on if the filing is out of date range
+            if start_date and filing_date < start_date:
+                continue
+
+            if end_date and filing_date > end_date:
+                continue
 
             if filing_types and form not in filing_types:
                 continue
@@ -152,8 +160,8 @@ class SecEdgarProvider:
                 )
             )
 
-            if limit and len(filings) >= limit:
-                break
+            # if limit and len(filings) >= limit:
+            #     break
 
         return filings
 

@@ -2,6 +2,10 @@
 
 from config import PROCESSED_DATA_DIR, RAW_DATA_DIR
 
+# =============================================================================
+# ========== (Non-Text) Data Acquisition ======================================
+# =============================================================================
+
 INGESTION_MODE_FIXTURE = "fixture"
 INGESTION_MODE_LIVE = "live"
 INGESTION_MODES = (INGESTION_MODE_FIXTURE, INGESTION_MODE_LIVE)
@@ -42,3 +46,13 @@ SEC_CONCEPTS = (
     SEC_CONCEPT_LIABILITIES,
     SEC_CONCEPT_OPERATING_CASH_FLOW,
 )
+
+# =============================================================================
+# ========== Document Ingestion ===============================================
+# =============================================================================
+
+USER_AGENT = "ai-investment-decision-support (nccruickshank94@gmail.com)"
+FILING_TYPES = ['10-K', '10-Q']
+# LIMIT = 500 # arbitrary high limit
+START_DATE = "2020-01-01"
+END_DATE = "2026-06-31"
