@@ -1,83 +1,60 @@
 """
-SEC EDGAR document retrieval utilities.
+SEC EDGAR document retrieval.
 
-This module provides a thin client around the SEC EDGAR submissions
-and filing archive APIs. It is responsible only for retrieving filing
-metadata and raw filing documents.
+This module provides a lightweight client for retrieving SEC filing
+metadata and filing documents from the public EDGAR APIs.
 
-Downstream responsibilities such as parsing, normalization, chunking,
-and persistence should be handled by separate modules.
+Responsibilities
+----------------
+* Retrieve company submission history
+* List available filings
+* Download filing HTML
+
+Non-responsibilities
+--------------------
+* Persisting documents
+* Parsing HTML
+* Chunking
+* Embeddings
+* SQLite interaction
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
-from pathlib import Path
 
-import requests
-
-
-class EdgarError(Exception):
-    """Base exception for SEC EDGAR retrieval errors."""
-
-
-class EdgarRequestError(EdgarError):
-    """Raised when an SEC request fails."""
+import httpx
 
 
 @dataclass(slots=True)
 class FilingMetadata:
-    """
-    Metadata describing an SEC filing.
-
-    Attributes
-    ----------
-    cik:
-        Company's SEC Central Index Key.
-
-    accession_number:
-        SEC accession number identifying the filing.
-
-    filing_type:
-        SEC form type (for example, 10-K or 10-Q).
-
-    filing_date:
-        Date the filing was submitted.
-
-    primary_document:
-        Filename of the primary filing document.
-
-    primary_doc_description:
-        SEC-provided description of the primary document.
-
-    filing_url:
-        URL to the primary filing document.
-    """
+    """Metadata describing a single SEC filing."""
 
     cik: str
     accession_number: str
     filing_type: str
     filing_date: date
     primary_document: str
-    primary_doc_description: str
     filing_url: str
+
+
+class EdgarRequestError(RuntimeError):
+    """Raised when an EDGAR request fails."""
 
 
 class SecEdgarProvider:
     """
-    Client for retrieving SEC EDGAR filings.
+    Lightweight client for the SEC EDGAR public APIs.
 
     Parameters
     ----------
-    cik:
-        Company CIK. Must be the 10-digit zero-padded SEC identifier.
+    user_agent
+        User-Agent string identifying your application.
+        Required by the SEC Fair Access Policy.
 
-    user_agent:
-        Identifying User-Agent string required by SEC fair access policy.
-
-    timeout:
-        HTTP request timeout in seconds.
+    timeout
+        HTTP timeout in seconds.
     """
 
     SUBMISSIONS_URL = (
@@ -91,110 +68,89 @@ class SecEdgarProvider:
 
     def __init__(
         self,
-        cik: str,
         user_agent: str,
         timeout: int = 30,
     ):
-        self.cik = self._normalize_cik(cik)
-        self.timeout = timeout
 
-        self.session = requests.Session()
-
-        self.session.headers.update(
-            {
+        self.client = httpx.Client(
+            headers={
                 "User-Agent": user_agent,
                 "Accept-Encoding": "gzip, deflate",
-                "Host": "www.sec.gov",
-            }
+            },
+            timeout=timeout,
+            follow_redirects=True,
         )
-
-    # ======================
-    # === Public Methods ===
-    # ======================
-
-    def get_company_submissions(self) -> dict:
-        """
-        Retrieve SEC submission history for the company.
-
-        Returns
-        -------
-        dict
-            Raw SEC submissions JSON response.
-        """
-
-        url = self._build_submission_url()
-
-        return self._request_json(url)
 
     def list_filings(
         self,
+        cik: str,
         filing_types: list[str] | None = None,
         limit: int | None = None,
     ) -> list[FilingMetadata]:
         """
-        Retrieve filing metadata from SEC submissions.
+        Retrieve filing metadata for a company.
 
         Parameters
         ----------
-        filing_types:
+        cik
+            SEC company CIK.
+
+        filing_types
             Optional list of SEC form types to include.
 
-            Example:
-                ["10-K", "10-Q"]
-
-        limit:
-            Maximum number of filings to return.
-
-        Returns
-        -------
-        list[FilingMetadata]
-            Filing metadata objects.
+        limit
+            Maximum number of filings returned.
         """
 
-        submissions = self.get_company_submissions()
+        cik = self._normalize_cik(cik)
 
-        recent = submissions["filings"]["recent"]
+        url = self.SUBMISSIONS_URL.format(cik=cik)
 
-        forms = recent["form"]
-        filing_dates = recent["filingDate"]
-        accession_numbers = recent["accessionNumber"]
-        primary_documents = recent["primaryDocument"]
-        descriptions = recent["primaryDocDescription"]
+        response = self.client.get(url)
+
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            raise EdgarRequestError(
+                f"Unable to retrieve submissions for CIK {cik}."
+            ) from exc
+
+        recent = response.json()["filings"]["recent"]
 
         filings: list[FilingMetadata] = []
 
         for (
             form,
             filing_date,
-            accession_number,
+            accession,
             primary_document,
-            description,
         ) in zip(
-            forms,
-            filing_dates,
-            accession_numbers,
-            primary_documents,
-            descriptions,
+            recent["form"],
+            recent["filingDate"],
+            recent["accessionNumber"],
+            recent["primaryDocument"],
             strict=True,
         ):
 
             if filing_types and form not in filing_types:
                 continue
 
-            filing = FilingMetadata(
-                cik=self.cik,
-                accession_number=accession_number,
-                filing_type=form,
-                filing_date=date.fromisoformat(filing_date),
-                primary_document=primary_document,
-                primary_doc_description=description,
-                filing_url=self._build_filing_url(
-                    accession_number,
-                    primary_document,
-                ),
+            archive_url = self.ARCHIVE_URL.format(
+                cik=int(cik),
+                accession=accession.replace("-", ""),
+                document=primary_document,
             )
 
-            filings.append(filing)
+            filings.append(
+                FilingMetadata(
+                    cik=cik,
+                    accession_number=accession,
+                    filing_type=form,
+                    filing_date=date.fromisoformat(filing_date),
+                    primary_document=primary_document,
+                    filing_url=archive_url,
+                )
+            )
 
             if limit and len(filings) >= limit:
                 break
@@ -206,144 +162,27 @@ class SecEdgarProvider:
         filing: FilingMetadata,
     ) -> str:
         """
-        Download filing contents.
-
-        Parameters
-        ----------
-        filing:
-            Filing metadata object.
+        Download the raw filing document.
 
         Returns
         -------
         str
-            Raw filing HTML/text.
+            Raw HTML returned by EDGAR.
         """
 
-        return self._request_text(
-            filing.filing_url
-        )
+        response = self.client.get(filing.filing_url)
 
-    def download_primary_document(
-        self,
-        filing: FilingMetadata,
-        output_path: Path,
-    ) -> Path:
-        """
-        Download and save a filing document.
-
-        Parameters
-        ----------
-        filing:
-            Filing metadata object.
-
-        output_path:
-            Destination file path.
-
-        Returns
-        -------
-        Path
-            Path to downloaded document.
-        """
-
-        content = self.download_filing(filing)
-
-        output_path.parent.mkdir(
-            parents=True,
-            exist_ok=True,
-        )
-
-        output_path.write_text(
-            content,
-            encoding="utf-8",
-        )
-
-        return output_path
-
-    # =======================
-    # === Private Methods ===
-    # =======================
-
-    def _build_submission_url(self) -> str:
-        """
-        Build SEC submissions endpoint URL.
-        """
-
-        return self.SUBMISSIONS_URL.format(
-            cik=self.cik,
-        )
-
-    def _build_filing_url(
-        self,
-        accession_number: str,
-        primary_document: str,
-    ) -> str:
-        """
-        Build SEC archive URL for primary document.
-        """
-
-        accession_clean = accession_number.replace(
-            "-",
-            "",
-        )
-
-        cik_clean = str(
-            int(self.cik)
-        )
-
-        return self.ARCHIVE_URL.format(
-            cik=cik_clean,
-            accession=accession_clean,
-            document=primary_document,
-        )
-
-    def _request_json(
-        self,
-        url: str,
-    ) -> dict:
-        """
-        Execute JSON GET request.
-        """
-
-        response = self.session.get(
-            url,
-            timeout=self.timeout,
-        )
-
-        if not response.ok:
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
             raise EdgarRequestError(
-                f"SEC request failed: "
-                f"{response.status_code} {url}"
-            )
-
-        return response.json()
-
-    def _request_text(
-        self,
-        url: str,
-    ) -> str:
-        """
-        Execute text GET request.
-        """
-
-        response = self.session.get(
-            url,
-            timeout=self.timeout,
-        )
-
-        if not response.ok:
-            raise EdgarRequestError(
-                f"SEC request failed: "
-                f"{response.status_code} {url}"
-            )
+                f"Unable to download {filing.filing_url}"
+            ) from exc
 
         return response.text
 
     @staticmethod
-    def _normalize_cik(
-        cik: str,
-    ) -> str:
-        """
-        Normalize CIK to SEC 10-digit format.
-        """
+    def _normalize_cik(cik: str | int) -> str:
+        """Convert a CIK to the SEC's required 10-digit format."""
 
-        return str(cik).zfill(10)
+        return f"{int(cik):010d}"
