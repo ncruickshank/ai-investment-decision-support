@@ -1,6 +1,6 @@
 # src / ingestion / documents / parser.py
 from pathlib import Path
-from bs4 import BeautifulSoup, Comment
+from bs4 import BeautifulSoup, Comment, Tag
 import re
 
 from .sec import FilingMetadata
@@ -26,6 +26,8 @@ class Table:
     rows: list[list[str]]
 
 class Section:
+    part: str 
+    item: str 
     title: str
     blocks: list[Paragraph | Table]
 
@@ -270,6 +272,90 @@ class DocumentParser:
             ):
                 tag.decompose()
 
+    def extract_sections(self):
+        """
+        Description
+        ----------
+        Identify the major Part/Item sections in the filing.
+
+        Sections are idenifited from the visible text of the DOM elements.
+        This method does not modify self.soup.
+
+        NOTE: This only returns *boundaries* of sections. Not the 
+        actual contents.
+
+        Inputs
+        ----------
+        None
+
+        Returns
+        ----------
+        list[dict]
+            A list of section boundary records. Each record contains:
+            - part: Filing part (e.g. "Part 1")
+            - item: Item number (e.g. "Item 1")
+            - title: Human-readable section title
+            - element: BeautifulSoup Tag containing the section heading
+        """
+        if self.soup is None:
+            raise RuntimeError('No HTML bas been loaded.')
+
+        self.sections = []
+        current_part = None 
+
+        # ----------
+        # SEC filings use a relatively consistent "PART 1." / "ITEM 1."
+        # convention. We inspect block-level dics instead of all text
+        # to ensure that references to these elements within the text 
+        # are preserved.
+        # ----------
+        for element in self.soup.find_all(['div', 'p', 'h1', 'h2', 'h3']):
+            text = element.get_text(' ', strip = True)
+
+            if not text:
+                continue
+
+            ## --- detect part headings ---
+            part_match = re.match(
+                # r'^PART\s+(I{1,3}|IV)\.',
+                r"^PART\s+(I{1,3}|IV)\.",
+                text,
+                flags = re.IGNORECASE 
+            )
+            # print(f'Part = {part_match}')
+
+            if part_match:
+                current_part = f"Part {part_match.group(1).upper()}"
+                continue 
+
+            ## --- detect item headings ---
+            ## e.g. ITEM 1., ITEM 1A., ITEM 2.
+            # if not self._is_section_heading(element):
+            #     continue 
+
+            item_match = re.match(
+                # r'^(ITEM\s+\d+[A-Z]?)\.?\s*(.*)$',
+                r"^(ITEM\s+\d+[A-Z]?)\.?\s*(.*)$",
+                text,
+                flags = re.IGNORECASE 
+            )
+            # print(f'Item = {item_match}')
+
+            if item_match is None:
+                continue
+
+            if current_part is None:
+                continue 
+
+            self.sections.append(
+                {
+                    'part': current_part,
+                    'item': item_match.group(1).upper(),
+                    'title': item_match.group(2).strip(),
+                    'element': element
+                }
+            )
+
     def html_to_blocks(self):
         raise NotImplementedError
 
@@ -290,3 +376,28 @@ class DocumentParser:
             return None 
 
         return tag.get_text(strip = True)
+
+    def _is_section_heading(self, element: Tag) -> bool:
+        """
+        Determine whether a DOM element represents a major SEC
+        Part/Item heading.
+        """
+
+        text = element.get_text(" ", strip=True)
+
+        if not text:
+            return False
+
+        # A section heading should begin with ITEM.
+        if not re.match(r"^ITEM\s+\d+[A-Z]?\.", text, re.IGNORECASE):
+            return False
+
+        # The Workiva filing renders major headings in bold.
+        # Avoid classifying ordinary prose containing "Item X."
+        # as a section heading.
+        style = element.get("style", "").lower()
+
+        if "font-weight:700" not in style:
+            return False
+
+        return True
